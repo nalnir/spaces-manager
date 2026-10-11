@@ -1,0 +1,11 @@
+#!/bin/zsh
+set -euo pipefail
+
+app_bundle="$HOME/Applications/Spaces Manager.app"
+
+if [[ ! -d "$app_bundle" ]]; then
+    printf 'Spaces Manager is not installed at %s\n' "$app_bundle" >&2
+    exit 1
+fi
+
+open "$app_bundle"

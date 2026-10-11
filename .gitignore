@@ -1,0 +1,9 @@
+.build/
+.swiftpm/
+
+# macOS Finder metadata
+.DS_Store
+
+# Local Xcode user state
+xcuserdata/
+*.xcuserstate
