@@ -3,8 +3,13 @@ set -euo pipefail
 
 project_root="${0:A:h:h}"
 app_bundle="$HOME/Applications/Spaces Manager.app"
-signing_identity="Apple Development: Lukas Stateczny (H35FP6QTR6)"
+signing_identity="${SPACES_MANAGER_SIGNING_IDENTITY:-}"
 launch_services_register="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+
+if [[ -z "$signing_identity" ]]; then
+  signing_identity="$(security find-identity -v -p codesigning 2>/dev/null | awk -F '"' '/Apple Development:/{print $2; exit}')"
+fi
+signing_identity="${signing_identity:--}"
 
 cd "$project_root"
 swift build
@@ -73,6 +78,11 @@ cat > "$app_bundle/Contents/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
+if [[ "$signing_identity" == "-" ]]; then
+  print "No Apple Development identity found; using ad-hoc signing."
+else
+  print "Signing with $signing_identity"
+fi
 codesign --force --deep --sign "$signing_identity" "$app_bundle"
 "$launch_services_register" -u "$app_bundle" 2>/dev/null || true
 "$launch_services_register" -f "$app_bundle"
