@@ -7,3 +7,6 @@
 # Local Xcode user state
 xcuserdata/
 *.xcuserstate
+
+# Local manual test plan
+TESTING.md

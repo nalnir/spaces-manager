@@ -3,6 +3,8 @@ set -euo pipefail
 
 project_root="${0:A:h:h}"
 app_bundle="$HOME/Applications/Spaces Manager.app"
+launch_agent="$HOME/Library/LaunchAgents/com.lukasstateczny.spacesmanager.plist"
+launch_agent_label="com.lukasstateczny.spacesmanager"
 signing_identity="${SPACES_MANAGER_SIGNING_IDENTITY:-}"
 launch_services_register="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
 
@@ -86,4 +88,22 @@ fi
 codesign --force --deep --sign "$signing_identity" "$app_bundle"
 "$launch_services_register" -u "$app_bundle" 2>/dev/null || true
 "$launch_services_register" -f "$app_bundle"
-open "$app_bundle"
+mkdir -p "$HOME/Library/LaunchAgents"
+cat > "$launch_agent" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>$launch_agent_label</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>$app_bundle/Contents/MacOS/SpacesManager</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+</dict>
+</plist>
+PLIST
+launchctl bootout "gui/$(id -u)" "$launch_agent" 2>/dev/null || true
+launchctl bootstrap "gui/$(id -u)" "$launch_agent"
