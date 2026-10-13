@@ -55,77 +55,101 @@ struct OrganizerView: View {
                 .transition(.opacity)
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .organizerArrowNavigation)) { notification in
-            let isUp = notificationBooleanValue(notification, key: "isUpArrow")
-            if activePicker != nil {
-                navigatePicker(horizontal: false, backwards: isUp)
-            } else {
-                moveKeyboardFocus(up: isUp)
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .organizerHorizontalNavigation)) { notification in
-            let isLeft = notification.userInfo?["isLeftArrow"] as? Bool ?? false
-            if activePicker != nil {
-                navigatePicker(horizontal: true, backwards: isLeft)
-            } else {
-                moveKeyboardSpaceFocus(left: isLeft)
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .organizerSpaceActivation)) { _ in
-            if let activePicker {
-                NotificationCenter.default.post(
-                    name: .organizerPickerApply,
-                    object: nil,
-                    userInfo: ["rowID": activePicker.rowID, "action": activePicker.action.rawValue]
-                )
-                self.activePicker = nil
-            } else {
-                activateKeyboardFocusedSpace()
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .organizerHeaderFocus)) { _ in
-            keyboardFocus = .header(selectedRowID: nil)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .organizerRowReorder)) { notification in
-            moveKeyboardFocusedRow(up: notificationBooleanValue(notification, key: "isUp"))
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .organizerHorizontalReorder)) { notification in
-            moveKeyboardFocusedItem(left: notificationBooleanValue(notification, key: "isLeft"))
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .organizerRowDeletion)) { _ in
-            deleteKeyboardFocusedRow()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .organizerRowAddition)) { _ in
-            addRow()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .organizerSpaceMove)) { notification in
-            moveKeyboardFocusedSpace(up: notificationBooleanValue(notification, key: "isUp"))
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .organizerSpaceMinimize)) { _ in
-            moveKeyboardFocusedSpaceToDesktop()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .organizerSpaceExit)) { _ in
-            closeKeyboardFocusedSpace()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .organizerRowEdit)) { notification in
-            guard let rowID = keyboardFocusedRowID,
-                  let actionName = notification.userInfo?["action"] as? String,
-                  let action = RowEditAction(rawValue: actionName) else { return }
-            let pickerFocus = RowPickerFocus(rowID: rowID, action: action)
-            if action == .rename {
-                activePicker = nil
-            } else if activePicker == pickerFocus {
-                activePicker = nil
-            } else {
-                activePicker = pickerFocus
-            }
-            rowEditRequest = RowEditRequest(rowID: rowID, action: action)
-        }
+        .onReceive(NotificationCenter.default.publisher(for: .organizerArrowNavigation), perform: handleArrowNavigation)
+        .onReceive(NotificationCenter.default.publisher(for: .organizerHorizontalNavigation), perform: handleHorizontalNavigation)
+        .onReceive(NotificationCenter.default.publisher(for: .organizerSpaceActivation), perform: handleSpaceActivation)
+        .onReceive(NotificationCenter.default.publisher(for: .organizerHeaderFocus), perform: handleHeaderFocus)
+        .onReceive(NotificationCenter.default.publisher(for: .organizerRowReorder), perform: handleRowReorder)
+        .onReceive(NotificationCenter.default.publisher(for: .organizerHorizontalReorder), perform: handleHorizontalReorder)
+        .onReceive(NotificationCenter.default.publisher(for: .organizerRowDeletion), perform: handleRowDeletion)
+        .onReceive(NotificationCenter.default.publisher(for: .organizerRowAddition), perform: handleRowAddition)
+        .onReceive(NotificationCenter.default.publisher(for: .organizerSpaceMove), perform: handleSpaceMove)
+        .onReceive(NotificationCenter.default.publisher(for: .organizerSpaceMinimize), perform: handleSpaceMinimize)
+        .onReceive(NotificationCenter.default.publisher(for: .organizerSpaceExit), perform: handleSpaceExit)
+        .onReceive(NotificationCenter.default.publisher(for: .organizerRowEdit), perform: handleRowEdit)
     }
 
     private func notificationBooleanValue(_ notification: Notification, key: String) -> Bool {
         guard let userInfo = notification.userInfo else { return false }
         return userInfo[key] as? Bool ?? false
+    }
+
+    private func handleArrowNavigation(_ notification: Notification) {
+        let isUp = notificationBooleanValue(notification, key: "isUpArrow")
+        if activePicker != nil {
+            navigatePicker(horizontal: false, backwards: isUp)
+        } else {
+            moveKeyboardFocus(up: isUp)
+        }
+    }
+
+    private func handleHorizontalNavigation(_ notification: Notification) {
+        let isLeft = notificationBooleanValue(notification, key: "isLeftArrow")
+        if activePicker != nil {
+            navigatePicker(horizontal: true, backwards: isLeft)
+        } else {
+            moveKeyboardSpaceFocus(left: isLeft)
+        }
+    }
+
+    private func handleSpaceActivation(_ notification: Notification) {
+        if let activePicker {
+            NotificationCenter.default.post(
+                name: .organizerPickerApply,
+                object: nil,
+                userInfo: ["rowID": activePicker.rowID, "action": activePicker.action.rawValue]
+            )
+            self.activePicker = nil
+        } else {
+            activateKeyboardFocusedSpace()
+        }
+    }
+
+    private func handleHeaderFocus(_ notification: Notification) {
+        keyboardFocus = .header(selectedRowID: nil)
+    }
+
+    private func handleRowReorder(_ notification: Notification) {
+        moveKeyboardFocusedRow(up: notificationBooleanValue(notification, key: "isUp"))
+    }
+
+    private func handleHorizontalReorder(_ notification: Notification) {
+        moveKeyboardFocusedItem(left: notificationBooleanValue(notification, key: "isLeft"))
+    }
+
+    private func handleRowDeletion(_ notification: Notification) {
+        deleteKeyboardFocusedRow()
+    }
+
+    private func handleRowAddition(_ notification: Notification) {
+        addRow()
+    }
+
+    private func handleSpaceMove(_ notification: Notification) {
+        moveKeyboardFocusedSpace(up: notificationBooleanValue(notification, key: "isUp"))
+    }
+
+    private func handleSpaceMinimize(_ notification: Notification) {
+        moveKeyboardFocusedSpaceToDesktop()
+    }
+
+    private func handleSpaceExit(_ notification: Notification) {
+        closeKeyboardFocusedSpace()
+    }
+
+    private func handleRowEdit(_ notification: Notification) {
+        guard let rowID = keyboardFocusedRowID,
+              let actionName = notification.userInfo?["action"] as? String,
+              let action = RowEditAction(rawValue: actionName) else { return }
+        let pickerFocus = RowPickerFocus(rowID: rowID, action: action)
+        if action == .rename {
+            activePicker = nil
+        } else if activePicker == pickerFocus {
+            activePicker = nil
+        } else {
+            activePicker = pickerFocus
+        }
+        rowEditRequest = RowEditRequest(rowID: rowID, action: action)
     }
 
     private var header: some View {
