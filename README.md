@@ -7,9 +7,16 @@ Spaces Manager presents an overlay of the Spaces on your displays, including des
 ## Requirements
 
 - macOS 14 Sonoma or later
-- Xcode Command Line Tools or Xcode with Swift 5.10+
+- Full Xcode with Swift 5.10+ (the Command Line Tools alone do not include the SwiftUI macro plugins)
 - Screen Recording permission for window thumbnails
 - Accessibility permission for switching Spaces and moving full-screen apps back to a desktop
+
+If `xcode-select -p` reports `/Library/Developer/CommandLineTools`, install and open the full Xcode app, then select its developer directory before building:
+
+```zsh
+sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+sudo xcodebuild -license accept
+```
 
 ## Install
 
