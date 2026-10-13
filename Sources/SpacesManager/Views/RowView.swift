@@ -251,14 +251,15 @@ struct RowView: View {
 
     private func spaceCard(_ space: SpaceRecord) -> some View {
         ZStack(alignment: .topLeading) {
-            Button { onSelect(space) } label: {
-                SpaceCard(
-                    space: space,
-                    isSelected: space.id == selectedSpaceID,
-                    isKeyboardFocused: space.id == keyboardFocusedSpaceID
-                )
+            SpaceCard(
+                space: space,
+                isSelected: space.id == selectedSpaceID,
+                isKeyboardFocused: space.id == keyboardFocusedSpaceID
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 6))
+            .onTapGesture {
+                onSelect(space)
             }
-            .buttonStyle(.plain)
 
             if space.kind == .fullScreenApp || space.kind == .splitView {
                 Button { onMoveToDesktop(space) } label: {
@@ -300,6 +301,8 @@ struct RowView: View {
             onBeginCardDrag()
             return spaceDragProvider(space.id)
         }
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel("Open \(space.name)")
     }
 
     private func handleSpaceCardDrop(_ providers: [NSItemProvider], before spaceID: String) -> Bool {

@@ -742,6 +742,10 @@ final class OverlayController: NSObject, NSApplicationDelegate {
             showSpaceActivationAlert(message: "Spaces Manager could not calculate a native Space transition for this card.")
             return
         }
+        guard navigation.count == 0 || isSpaceNavigationEnabled(direction: navigation.direction) else {
+            showSpaceActivationAlert(message: "Enable Move left a space and Move right a space in System Settings > Keyboard > Keyboard Shortcuts > Mission Control.")
+            return
+        }
         guard CGPreflightPostEventAccess() else {
             requestAccessibilityAccessIfNeeded()
             showAccessibilityPermissionAlert()
@@ -905,6 +909,14 @@ final class OverlayController: NSObject, NSApplicationDelegate {
         let parameters = value?["parameters"] as? [NSNumber]
         guard parameters?.count ?? 0 > 2 else { return .maskControl }
         return CGEventFlags(rawValue: parameters![2].uint64Value)
+    }
+
+    private func isSpaceNavigationEnabled(direction: SpaceNavigationDirection) -> Bool {
+        let symbolicHotKeyID = direction == .left ? "79" : "81"
+        let defaults = UserDefaults(suiteName: "com.apple.symbolichotkeys")
+        let hotKeys = defaults?.dictionary(forKey: "AppleSymbolicHotKeys")
+        let hotKey = hotKeys?[symbolicHotKeyID] as? [String: Any]
+        return hotKey?["enabled"] as? Bool ?? true
     }
 
     private func showAccessibilityPermissionAlert() {
