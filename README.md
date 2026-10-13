@@ -16,7 +16,7 @@ Spaces Manager presents an overlay of the Spaces on your displays, including des
 1. Clone the repository and open it in Terminal.
 
    ```zsh
-   git clone https://github.com/nalnir/SpacesManager.git
+   git clone https://github.com/nalnir/spaces-manager.git
    cd SpacesManager
    ```
 
