@@ -14,14 +14,16 @@ fi
 signing_identity="${signing_identity:--}"
 
 cd "$project_root"
-swift build
+build_products_dir="$(swift build --show-bin-path)"
 pkill -x SpacesManager 2>/dev/null || true
 mkdir -p "$HOME/Applications"
 rm -rf "$app_bundle"
 mkdir -p "$app_bundle/Contents/MacOS"
+mkdir -p "$app_bundle/Contents/Resources"
 iconset="$app_bundle/Contents/Resources/AppIcon.iconset"
 mkdir -p "$iconset"
-cp "$project_root/.build/debug/SpacesManager" "$app_bundle/Contents/MacOS/SpacesManager"
+cp "$build_products_dir/SpacesManager" "$app_bundle/Contents/MacOS/SpacesManager"
+cp -R "$build_products_dir/SpacesManager_SpacesManager.bundle" "$app_bundle/Contents/Resources/"
 
 for size in 16 32 128 256 512; do
   sips -z "$size" "$size" "$project_root/Sources/SpacesManager/Resources/AppIcon.png" --out "$iconset/icon_${size}x${size}.png" >/dev/null
@@ -107,3 +109,4 @@ cat > "$launch_agent" <<PLIST
 PLIST
 launchctl bootout "gui/$(id -u)" "$launch_agent" 2>/dev/null || true
 launchctl bootstrap "gui/$(id -u)" "$launch_agent"
+open "$app_bundle"
