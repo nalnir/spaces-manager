@@ -111,12 +111,13 @@ struct OrganizerView: View {
             guard let rowID = keyboardFocusedRowID,
                   let actionName = notification.userInfo?["action"] as? String,
                   let action = RowEditAction(rawValue: actionName) else { return }
+            let pickerFocus = RowPickerFocus(rowID: rowID, action: action)
             if action == .rename {
                 activePicker = nil
-            } else if activePicker == RowPickerFocus(rowID: rowID, action: action) {
+            } else if activePicker == pickerFocus {
                 activePicker = nil
             } else {
-                activePicker = RowPickerFocus(rowID: rowID, action: action)
+                activePicker = pickerFocus
             }
             rowEditRequest = RowEditRequest(rowID: rowID, action: action)
         }
