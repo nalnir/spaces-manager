@@ -17,7 +17,7 @@ Spaces Manager presents an overlay of the Spaces on your displays, including des
 
    ```zsh
    git clone https://github.com/nalnir/spaces-manager.git
-   cd SpacesManager
+   cd spaces-manager
    ```
 
 2. Build, install, and launch the app.
