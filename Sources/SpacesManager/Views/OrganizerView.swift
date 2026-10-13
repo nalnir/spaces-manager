@@ -56,7 +56,7 @@ struct OrganizerView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .organizerArrowNavigation)) { notification in
-            let isUp = notification.userInfo?["isUpArrow"] as? Bool ?? false
+            let isUp = notificationBooleanValue(notification, key: "isUpArrow")
             if activePicker != nil {
                 navigatePicker(horizontal: false, backwards: isUp)
             } else {
@@ -87,10 +87,10 @@ struct OrganizerView: View {
             keyboardFocus = .header(selectedRowID: nil)
         }
         .onReceive(NotificationCenter.default.publisher(for: .organizerRowReorder)) { notification in
-            moveKeyboardFocusedRow(up: notification.userInfo?["isUp"] as? Bool ?? false)
+            moveKeyboardFocusedRow(up: notificationBooleanValue(notification, key: "isUp"))
         }
         .onReceive(NotificationCenter.default.publisher(for: .organizerHorizontalReorder)) { notification in
-            moveKeyboardFocusedItem(left: notification.userInfo?["isLeft"] as? Bool ?? false)
+            moveKeyboardFocusedItem(left: notificationBooleanValue(notification, key: "isLeft"))
         }
         .onReceive(NotificationCenter.default.publisher(for: .organizerRowDeletion)) { _ in
             deleteKeyboardFocusedRow()
@@ -99,7 +99,7 @@ struct OrganizerView: View {
             addRow()
         }
         .onReceive(NotificationCenter.default.publisher(for: .organizerSpaceMove)) { notification in
-            moveKeyboardFocusedSpace(up: notification.userInfo?["isUp"] as? Bool ?? false)
+            moveKeyboardFocusedSpace(up: notificationBooleanValue(notification, key: "isUp"))
         }
         .onReceive(NotificationCenter.default.publisher(for: .organizerSpaceMinimize)) { _ in
             moveKeyboardFocusedSpaceToDesktop()
@@ -121,6 +121,11 @@ struct OrganizerView: View {
             }
             rowEditRequest = RowEditRequest(rowID: rowID, action: action)
         }
+    }
+
+    private func notificationBooleanValue(_ notification: Notification, key: String) -> Bool {
+        guard let userInfo = notification.userInfo else { return false }
+        return userInfo[key] as? Bool ?? false
     }
 
     private var header: some View {
@@ -190,8 +195,8 @@ struct OrganizerView: View {
                     .background(Color(hex: row.accentHex).opacity(0.78), in: Capsule())
                     .overlay {
                         Capsule().stroke(
-                            keyboardFocusedHeaderChipID == row.id ? Color(hex: "73BCEB") : (focusedRowID == row.id ? .white : .white.opacity(0.22)),
-                            lineWidth: keyboardFocusedHeaderChipID == row.id || focusedRowID == row.id ? 2 : 1
+                            chipStrokeColor(for: row.id),
+                            lineWidth: chipStrokeWidth(for: row.id)
                         )
                     }
                 }
@@ -249,6 +254,17 @@ struct OrganizerView: View {
 
     private func chipName(for name: String) -> String {
         name.count > 15 ? String(name.prefix(15)) + "..." : name
+    }
+
+    private func chipStrokeColor(for rowID: UUID) -> Color {
+        if keyboardFocusedHeaderChipID == rowID {
+            return Color(hex: "73BCEB")
+        }
+        return focusedRowID == rowID ? .white : .white.opacity(0.22)
+    }
+
+    private func chipStrokeWidth(for rowID: UUID) -> CGFloat {
+        keyboardFocusedHeaderChipID == rowID || focusedRowID == rowID ? 2 : 1
     }
 
     private var rows: some View {

@@ -67,10 +67,21 @@ struct SpaceCard: View {
         .overlay {
             RoundedRectangle(cornerRadius: 6)
                 .stroke(
-                    isKeyboardFocused ? Color(hex: "73BCEB") : (isSelected ? Color.white : .white.opacity(0.18)),
-                    lineWidth: isKeyboardFocused || isSelected ? 2 : 1
+                    strokeColor,
+                    lineWidth: strokeWidth
                 )
         }
+    }
+
+    private var strokeColor: Color {
+        if isKeyboardFocused {
+            return Color(hex: "73BCEB")
+        }
+        return isSelected ? .white : .white.opacity(0.18)
+    }
+
+    private var strokeWidth: CGFloat {
+        isKeyboardFocused || isSelected ? 2 : 1
     }
 }
 

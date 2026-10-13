@@ -292,16 +292,7 @@ struct RowView: View {
         .onDrop(
             of: [.spacesManagerRow, .spacesManagerSpace],
             delegate: RowOrSpaceDropDelegate(
-                performDrop: { providers in
-                    if providers.contains(where: {
-                        $0.hasItemConformingToTypeIdentifier(UTType.spacesManagerRow.identifier)
-                    }) {
-                        return swapRowFrom(providers)
-                    }
-                    let accepted = moveFrom(providers: providers, before: space.id)
-                    if accepted { onEndCardDrag() }
-                    return accepted
-                },
+                performDrop: { handleSpaceCardDrop($0, before: space.id) },
                 updateDragPosition: updateDragScrollPosition
             )
         )
@@ -309,6 +300,19 @@ struct RowView: View {
             onBeginCardDrag()
             return spaceDragProvider(space.id)
         }
+    }
+
+    private func handleSpaceCardDrop(_ providers: [NSItemProvider], before spaceID: String) -> Bool {
+        if providers.contains(where: {
+            $0.hasItemConformingToTypeIdentifier(UTType.spacesManagerRow.identifier)
+        }) {
+            return swapRowFrom(providers)
+        }
+        let accepted = moveFrom(providers: providers, before: spaceID)
+        if accepted {
+            onEndCardDrag()
+        }
+        return accepted
     }
 
     private func scrollToKeyboardFocusedSpace(_ spaceID: String?, with proxy: ScrollViewProxy) {
@@ -370,8 +374,8 @@ struct RowView: View {
                         .frame(width: 24, height: 24)
                         .overlay {
                             Circle().stroke(
-                                index == colorSelectionIndex ? Color(hex: "73BCEB") : (row.accentHex == hex ? .white : .black.opacity(0.2)),
-                                lineWidth: index == colorSelectionIndex || row.accentHex == hex ? 2 : 1
+                                colorPickerStrokeColor(index: index, hex: hex),
+                                lineWidth: colorPickerStrokeWidth(index: index, hex: hex)
                             )
                         }
                 }
@@ -380,6 +384,17 @@ struct RowView: View {
             }
         }
         .padding(10)
+    }
+
+    private func colorPickerStrokeColor(index: Int, hex: String) -> Color {
+        if index == colorSelectionIndex {
+            return Color(hex: "73BCEB")
+        }
+        return row.accentHex == hex ? .white : .black.opacity(0.2)
+    }
+
+    private func colorPickerStrokeWidth(index: Int, hex: String) -> CGFloat {
+        index == colorSelectionIndex || row.accentHex == hex ? 2 : 1
     }
 
     private var rowDragHandle: some View {
