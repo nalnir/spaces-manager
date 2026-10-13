@@ -106,7 +106,3 @@ The Swift package target lives in `Sources/SpacesManager`:
 - `Overlay` contains the menu-bar and overlay controller.
 - `Views` contains the SwiftUI organizer, row, and card views.
 - `Support` contains shared SwiftUI interaction helpers.
-
-## Testing
-
-Use the comprehensive manual test checklist in [TESTING.md](TESTING.md) before sharing a build.
