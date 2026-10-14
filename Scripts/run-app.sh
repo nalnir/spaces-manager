@@ -109,4 +109,4 @@ cat > "$launch_agent" <<PLIST
 PLIST
 launchctl bootout "gui/$(id -u)" "$launch_agent" 2>/dev/null || true
 launchctl bootstrap "gui/$(id -u)" "$launch_agent"
-open "$app_bundle"
+launchctl kickstart -k "gui/$(id -u)/$launch_agent_label"

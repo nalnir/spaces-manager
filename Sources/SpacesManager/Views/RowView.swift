@@ -260,6 +260,10 @@ struct RowView: View {
             .onTapGesture {
                 onSelect(space)
             }
+            .onDrag {
+                onBeginCardDrag()
+                return spaceDragProvider(space.id)
+            }
 
             if space.kind == .fullScreenApp || space.kind == .splitView {
                 Button { onMoveToDesktop(space) } label: {
@@ -297,10 +301,6 @@ struct RowView: View {
                 updateDragPosition: updateDragScrollPosition
             )
         )
-        .onDrag {
-            onBeginCardDrag()
-            return spaceDragProvider(space.id)
-        }
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel("Open \(space.name)")
     }

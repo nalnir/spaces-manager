@@ -30,7 +30,15 @@ extension Notification.Name {
 }
 
 @MainActor
+@main
 final class OverlayController: NSObject, NSApplicationDelegate {
+    static func main() {
+        let application = NSApplication.shared
+        let delegate = OverlayController()
+        application.delegate = delegate
+        application.run()
+    }
+
     private let store = SpaceOrganizationStore()
     private var panel: NSPanel?
     private var hotKey: EventHotKeyRef?
@@ -908,7 +916,16 @@ final class OverlayController: NSObject, NSApplicationDelegate {
         let value = hotKey?["value"] as? [String: Any]
         let parameters = value?["parameters"] as? [NSNumber]
         guard parameters?.count ?? 0 > 2 else { return .maskControl }
-        return CGEventFlags(rawValue: parameters![2].uint64Value)
+        return cgEventFlags(fromCarbonModifiers: parameters![2].uint32Value)
+    }
+
+    private func cgEventFlags(fromCarbonModifiers modifiers: UInt32) -> CGEventFlags {
+        var flags: CGEventFlags = []
+        if modifiers & UInt32(cmdKey) != 0 { flags.insert(.maskCommand) }
+        if modifiers & UInt32(shiftKey) != 0 { flags.insert(.maskShift) }
+        if modifiers & UInt32(optionKey) != 0 { flags.insert(.maskAlternate) }
+        if modifiers & UInt32(controlKey) != 0 { flags.insert(.maskControl) }
+        return flags
     }
 
     private func isSpaceNavigationEnabled(direction: SpaceNavigationDirection) -> Bool {
