@@ -101,7 +101,9 @@ cat > "$launch_agent" <<PLIST
   <string>$launch_agent_label</string>
   <key>ProgramArguments</key>
   <array>
-    <string>$app_bundle/Contents/MacOS/SpacesManager</string>
+    <string>/usr/bin/open</string>
+    <string>-gj</string>
+    <string>$app_bundle</string>
   </array>
   <key>RunAtLoad</key>
   <true/>
