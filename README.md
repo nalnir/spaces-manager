@@ -4,48 +4,14 @@ A native macOS menu bar app for viewing, organizing, and navigating Mission Cont
 
 Spaces Manager presents an overlay of the Spaces on your displays, including desktops, full-screen apps, and Split View pairs. Organize them into custom rows, reorder them with drag and drop or the keyboard, and switch to a Space directly from the overlay.
 
-## Requirements
-
-- macOS 14 Sonoma or later
-- Full Xcode with Swift 5.10+ (the Command Line Tools alone do not include the SwiftUI macro plugins)
-- Screen Recording permission for window thumbnails
-- Accessibility permission for switching Spaces and moving full-screen apps back to a desktop
-
-If `xcode-select -p` reports `/Library/Developer/CommandLineTools`, install and open the full Xcode app, then select its developer directory before building:
-
-```zsh
-sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
-sudo xcodebuild -license accept
-```
-
 ## Install
 
-1. Clone the repository and open it in Terminal.
+1. Download `SpacesManager-<version>.zip` from the project's GitHub Releases page.
+2. Unzip it, then drag **Spaces Manager.app** to your Applications folder.
+3. Open **Spaces Manager.app**. On first launch, macOS may ask you to confirm that you want to open it.
+4. Grant **Screen & System Audio Recording** and **Accessibility** in **System Settings > Privacy & Security** when prompted. You can also use the menu-bar icon to open the relevant Settings page.
 
-   ```zsh
-   git clone https://github.com/nalnir/spaces-manager.git
-   cd spaces-manager
-   ```
-
-2. Build, install, and launch the app.
-
-   ```zsh
-   ./Scripts/run-app.sh
-   ```
-
-   The script automatically uses an Apple Development identity when one is available, otherwise it uses ad-hoc signing. It installs the app at `~/Applications/Spaces Manager.app` and registers it to start automatically whenever you sign in. Launch an already installed copy with:
-
-   ```zsh
-   ./Scripts/spaces-manager
-   ```
-
-3. When prompted, allow Screen Recording and Accessibility in **System Settings > Privacy & Security**. You can also open the Spaces Manager menu bar icon to review or request permissions.
-
-To force a particular signing identity, set `SPACES_MANAGER_SIGNING_IDENTITY` for the installation command:
-
-```zsh
-SPACES_MANAGER_SIGNING_IDENTITY="Apple Development: Your Name (TEAMID)" ./Scripts/run-app.sh
-```
+Updates use the same install process: quit the running app, replace it in Applications with the newer release, then reopen it. Keep the app in Applications so macOS retains its permission grants.
 
 ## Features
 
@@ -89,9 +55,48 @@ When an icon or color picker is open, use `Command` with the arrow keys to chang
 - **Accessibility** is required because switching Spaces and exiting full-screen use synthesized macOS input events.
 - The app reads the native Space inventory through macOS's private SkyLight framework, with a public WindowServer-based fallback. Private frameworks are unsupported by Apple and may change in future macOS releases.
 - Selecting a Space relies on the system's configured Mission Control shortcuts. Keep **Move left a space** and **Move right a space** enabled in macOS Keyboard Shortcuts for reliable navigation.
-- This project is intended for local use and is not sandboxed or notarized for distribution.
+- This project is not sandboxed and uses the private SkyLight framework, so distribute it directly rather than through the Mac App Store.
+
+## Release Distribution
+
+Use a stable Developer ID signature and Apple notarization for direct distribution. This lets user-granted Screen Recording and Accessibility permissions remain associated with the app across updates.
+
+1. Create a **Developer ID Application** certificate in your Apple Developer account and install it in Keychain Access.
+2. Store App Store Connect API credentials as a `notarytool` keychain profile. Replace the placeholders with your credentials:
+
+   ```zsh
+   xcrun notarytool store-credentials "SpacesManagerNotary" \
+     --key <AuthKey_KEYID.p8> \
+     --key-id <KEY_ID> \
+     --issuer <ISSUER_ID>
+   ```
+
+3. Build, sign, notarize, staple, and archive a release:
+
+   ```zsh
+   SPACES_MANAGER_NOTARY_PROFILE="SpacesManagerNotary" ./Scripts/release.sh 0.1.0
+   ```
+
+   Set `SPACES_MANAGER_RELEASE_IDENTITY` when more than one Developer ID Application certificate is installed. The completed archive is written to `dist/SpacesManager-0.1.0.zip` and can be published on a website or GitHub Release.
 
 ## Development
+
+Development requires macOS 14 Sonoma or later and full Xcode with Swift 5.10+. The Command Line Tools alone do not include the SwiftUI macro plugins. If `xcode-select -p` reports `/Library/Developer/CommandLineTools`, install and open Xcode, then run:
+
+```zsh
+sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+sudo xcodebuild -license accept
+```
+
+Clone the repository and install a development build with:
+
+```zsh
+git clone https://github.com/nalnir/spaces-manager.git
+cd spaces-manager
+./Scripts/run-app.sh
+```
+
+The development installer uses an Apple Development identity when available and otherwise uses ad-hoc signing. It installs the app at `~/Applications/Spaces Manager.app`. Use `./Scripts/spaces-manager` to reopen an installed development build.
 
 Build the executable without installing the application bundle:
 

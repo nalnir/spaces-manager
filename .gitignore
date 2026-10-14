@@ -1,5 +1,12 @@
 .build/
 .swiftpm/
+dist/*
+
+# Local signing and notarization credentials
+*.p8
+*.p12
+*.mobileprovision
+*.cer
 
 # macOS Finder metadata
 .DS_Store
