@@ -261,6 +261,7 @@ struct RowView: View {
                 onSelect(space)
             }
             .onDrag {
+                NSLog("Spaces Manager started dragging Space card: \(space.id)")
                 onBeginCardDrag()
                 return spaceDragProvider(space.id)
             }

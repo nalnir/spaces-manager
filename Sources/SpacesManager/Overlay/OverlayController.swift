@@ -64,6 +64,7 @@ final class OverlayController: NSObject, NSApplicationDelegate {
     private var hotKeyHandler: EventHandlerRef?
     private var activeSpaceObserver: NSObjectProtocol?
     private var activeSpacePollTimer: Timer?
+    private var discoveryTask: Task<Void, Never>?
     private var lastObservedActiveSpaceID: String?
     private var isOverlayPresented = false
     private var dragReleaseMonitor: Any?
@@ -723,9 +724,6 @@ final class OverlayController: NSObject, NSApplicationDelegate {
             panel.animator().setFrame(frames.destination, display: true)
             panel.animator().alphaValue = 1
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { [weak self] in
-            self?.refreshDiscoveredSpaces()
-        }
     }
 
     func toggleOverlay() {
@@ -889,43 +887,36 @@ final class OverlayController: NSObject, NSApplicationDelegate {
 
     private func postSpaceNavigation(direction: SpaceNavigationDirection) {
         let source = CGEventSource(stateID: .hidSystemState)
-        let modifiers = configuredSpaceNavigationModifiers(for: direction)
+        let shortcut = configuredSpaceNavigationShortcut(for: direction)
 
         let keyDown = CGEvent(
             keyboardEventSource: source,
-            virtualKey: direction.keyCode,
+            virtualKey: shortcut.keyCode,
             keyDown: true
         )
-        keyDown?.flags = modifiers
+        keyDown?.flags = shortcut.modifiers
         keyDown?.post(tap: .cghidEventTap)
 
         let keyUp = CGEvent(
             keyboardEventSource: source,
-            virtualKey: direction.keyCode,
+            virtualKey: shortcut.keyCode,
             keyDown: false
         )
-        keyUp?.flags = modifiers
+        keyUp?.flags = shortcut.modifiers
         keyUp?.post(tap: .cghidEventTap)
     }
 
-    private func configuredSpaceNavigationModifiers(for direction: SpaceNavigationDirection) -> CGEventFlags {
+    private func configuredSpaceNavigationShortcut(for direction: SpaceNavigationDirection) -> (keyCode: CGKeyCode, modifiers: CGEventFlags) {
         let symbolicHotKeyID = direction == .left ? "79" : "81"
         let defaults = UserDefaults(suiteName: "com.apple.symbolichotkeys")
         let hotKeys = defaults?.dictionary(forKey: "AppleSymbolicHotKeys")
         let hotKey = hotKeys?[symbolicHotKeyID] as? [String: Any]
         let value = hotKey?["value"] as? [String: Any]
         let parameters = value?["parameters"] as? [NSNumber]
-        guard parameters?.count ?? 0 > 2 else { return .maskControl }
-        return cgEventFlags(fromCarbonModifiers: parameters![2].uint32Value)
-    }
-
-    private func cgEventFlags(fromCarbonModifiers modifiers: UInt32) -> CGEventFlags {
-        var flags: CGEventFlags = []
-        if modifiers & UInt32(cmdKey) != 0 { flags.insert(.maskCommand) }
-        if modifiers & UInt32(shiftKey) != 0 { flags.insert(.maskShift) }
-        if modifiers & UInt32(optionKey) != 0 { flags.insert(.maskAlternate) }
-        if modifiers & UInt32(controlKey) != 0 { flags.insert(.maskControl) }
-        return flags
+        guard let parameters, parameters.count > 2 else {
+            return (direction.keyCode, .maskControl)
+        }
+        return (CGKeyCode(parameters[1].uint16Value), CGEventFlags(rawValue: parameters[2].uint64Value))
     }
 
     private func isSpaceNavigationEnabled(direction: SpaceNavigationDirection) -> Bool {
@@ -967,6 +958,8 @@ final class OverlayController: NSObject, NSApplicationDelegate {
     private func dismissOverlay() {
         guard let panel else { return }
         isOverlayPresented = false
+        discoveryTask?.cancel()
+        discoveryTask = nil
         updateStatusMenu()
         stopActiveSpacePolling()
         let hiddenFrame = panel.frame.offsetBy(dx: 0, dy: 36)
@@ -984,8 +977,16 @@ final class OverlayController: NSObject, NSApplicationDelegate {
         if !CGPreflightScreenCaptureAccess() {
             requestScreenCaptureAccessIfNeeded()
         }
-        Task {
+        discoveryTask?.cancel()
+        discoveryTask = Task { [weak self] in
             let spaces = await SkyLightSpaceDiscovery().currentSpaces()
+            guard !Task.isCancelled,
+                  let self,
+                  self.isOverlayPresented else { return }
+            guard !spaces.isEmpty else {
+                NSLog("Spaces Manager ignored an empty Space discovery result.")
+                return
+            }
             NSLog("Spaces Manager applying \(spaces.count) discovered Spaces.")
             store.reconcile(discovered: spaces)
         }

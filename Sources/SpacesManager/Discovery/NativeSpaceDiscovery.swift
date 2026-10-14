@@ -45,14 +45,26 @@ struct SkyLightSpaceDiscovery: NativeSpaceDiscovering {
             return await fallback.currentSpaces()
         }
 
-        let visibleSpaces = await fallback.currentSpaces()
         let windowTitlesByID = await fallback.windowTitlesByID()
-        let nativeWindowIDs = Set(snapshot.spaces.flatMap(windowIdentifiers(in:)))
-        let windowThumbnailsByID = await fallback.windowThumbnailsByID(for: nativeWindowIDs)
-        let desktopThumbnail = visibleSpaces.first(where: { $0.kind == .desktop })?.thumbnail
+        let activeNativeWindowIDs = Set(snapshot.spaces
+            .filter { space in
+                guard let identifier = space["ManagedSpaceID"] as? NSNumber else { return false }
+                return snapshot.activeSpaceIDs.contains(identifier.stringValue)
+            }
+            .flatMap(windowIdentifiers(in:)))
+        let windowThumbnailsByID = await fallback.windowThumbnailsByID(for: activeNativeWindowIDs)
+        let activeProcessIdentifiers = Set(snapshot.spaces
+            .filter { space in
+                guard let identifier = space["ManagedSpaceID"] as? NSNumber else { return false }
+                return snapshot.activeSpaceIDs.contains(identifier.stringValue)
+            }
+            .flatMap(processIdentifiers(in:)))
+        let windowThumbnailsByProcessID = await fallback.windowThumbnailsByProcessIdentifier(
+            for: activeProcessIdentifiers
+        )
         var desktopCount = 0
 
-        var records = snapshot.spaces.map { space -> SpaceRecord in
+        let records = snapshot.spaces.map { space -> SpaceRecord in
             let identifier = space["ManagedSpaceID"] as? NSNumber
             let spaceID = identifier?.stringValue ?? UUID().uuidString
             let isActive = snapshot.activeSpaceIDs.contains(spaceID)
@@ -83,10 +95,9 @@ struct SkyLightSpaceDiscovery: NativeSpaceDiscovering {
             }
 
             let thumbnail: CGImage?
-            if kind == .desktop && isActive {
-                thumbnail = desktopThumbnail
-            } else if isActive {
+            if isActive {
                 thumbnail = windowIdentifiers.lazy.compactMap { windowThumbnailsByID[$0] }.first
+                    ?? processIdentifiers.lazy.compactMap { windowThumbnailsByProcessID[$0] }.first
             } else {
                 thumbnail = nil
             }
@@ -103,13 +114,6 @@ struct SkyLightSpaceDiscovery: NativeSpaceDiscovering {
                 windowIdentifiers: windowIdentifiers
             )
         }
-        let nativeProcessIdentifiers = Set(records.flatMap(\.applicationProcessIdentifiers))
-        let fallbackOnlySpaces = visibleSpaces.filter { space in
-            space.kind == .fullScreenApp
-                && !space.applicationProcessIdentifiers.isEmpty
-                && space.applicationProcessIdentifiers.allSatisfy { !nativeProcessIdentifiers.contains($0) }
-        }
-        records.append(contentsOf: fallbackOnlySpaces)
         NSLog("Spaces Manager read \(records.count) native Spaces from SkyLight.")
         return records
     }
@@ -258,7 +262,41 @@ struct WindowServerDiscovery: NativeSpaceDiscovering {
         return thumbnails
     }
 
+    func windowThumbnailsByProcessIdentifier(for processIdentifiers: Set<pid_t>) async -> [pid_t: CGImage] {
+        guard !processIdentifiers.isEmpty,
+              CGPreflightScreenCaptureAccess(),
+              let content = try? await SCShareableContent.excludingDesktopWindows(
+                false,
+                onScreenWindowsOnly: false
+              ) else {
+            return [:]
+        }
+        let windowsByProcess = Dictionary(grouping: content.windows.filter { window in
+            guard let processIdentifier = window.owningApplication?.processID else { return false }
+            return processIdentifiers.contains(processIdentifier)
+        }) { $0.owningApplication!.processID }
+        var thumbnails: [pid_t: CGImage] = [:]
+        for (processIdentifier, windows) in windowsByProcess {
+            guard let window = windows.max(by: {
+                $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height
+            }) else { continue }
+            let configuration = SCStreamConfiguration()
+            configuration.width = 480
+            configuration.height = 270
+            configuration.showsCursor = false
+            thumbnails[processIdentifier] = try? await SCScreenshotManager.captureImage(
+                contentFilter: SCContentFilter(desktopIndependentWindow: window),
+                configuration: configuration
+            )
+        }
+        return thumbnails
+    }
+
     func currentSpaces() async -> [SpaceRecord] {
+        await currentSpaces(includeAppThumbnails: true)
+    }
+
+    func currentSpaces(includeAppThumbnails: Bool) async -> [SpaceRecord] {
         guard CGPreflightScreenCaptureAccess() else {
             NSLog("Spaces Manager needs Screen Recording permission before it can discover Spaces.")
             return []
@@ -342,10 +380,12 @@ struct WindowServerDiscovery: NativeSpaceDiscovering {
             config.width = 480
             config.height = 270
             config.showsCursor = false
-            let thumbnail = try? await SCScreenshotManager.captureImage(
-                contentFilter: SCContentFilter(desktopIndependentWindow: window),
-                configuration: config
-            )
+            let thumbnail = includeAppThumbnails
+                ? try? await SCScreenshotManager.captureImage(
+                    contentFilter: SCContentFilter(desktopIndependentWindow: window),
+                    configuration: config
+                )
+                : nil
             discovered.append(
                 SpaceRecord(
                     id: "app-\(application.processID)",
