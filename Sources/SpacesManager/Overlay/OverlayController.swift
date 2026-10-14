@@ -79,8 +79,7 @@ final class OverlayController: NSObject, NSApplicationDelegate {
         installStatusItem()
         installInvocationHotKey()
         observeActiveSpaceChanges()
-        NSLog("Spaces Manager can post Space navigation events: \(CGPreflightPostEventAccess())")
-        requestScreenCaptureAccessIfNeeded()
+        NSLog("Spaces Manager permissions: Accessibility=\(AXIsProcessTrusted()), ScreenRecording=\(CGPreflightScreenCaptureAccess())")
     }
 
     func applicationShouldRestoreApplicationState(_ app: NSApplication) -> Bool {
@@ -145,10 +144,10 @@ final class OverlayController: NSObject, NSApplicationDelegate {
     }
 
     private func requestAccessibilityAccessIfNeeded() {
-        guard !CGPreflightPostEventAccess() else { return }
+        guard !AXIsProcessTrusted() else { return }
         isAwaitingAccessibilityAuthorization = true
         let promptKey = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
-        AXIsProcessTrustedWithOptions([promptKey: false] as CFDictionary)
+        AXIsProcessTrustedWithOptions([promptKey: true] as CFDictionary)
         accessibilityAuthorizationPollTimer?.invalidate()
         accessibilityAuthorizationPollTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
@@ -207,7 +206,7 @@ final class OverlayController: NSObject, NSApplicationDelegate {
             keyEquivalent: ""
         )
         screenRecordingItem.target = self
-        let accessibilityEnabled = CGPreflightPostEventAccess()
+        let accessibilityEnabled = AXIsProcessTrusted()
         let accessibilityItem = menu.addItem(
             withTitle: accessibilityEnabled ? "Accessibility: Enabled" : "Open Accessibility Settings...",
             action: accessibilityEnabled ? nil : #selector(openAccessibilitySettings),
@@ -761,7 +760,7 @@ final class OverlayController: NSObject, NSApplicationDelegate {
             showSpaceActivationAlert(message: "Enable Move left a space and Move right a space in System Settings > Keyboard > Keyboard Shortcuts > Mission Control.")
             return
         }
-        guard CGPreflightPostEventAccess() else {
+        guard AXIsProcessTrusted() else {
             requestAccessibilityAccessIfNeeded()
             showAccessibilityPermissionAlert()
             return
@@ -780,7 +779,11 @@ final class OverlayController: NSObject, NSApplicationDelegate {
     private func moveToDesktop(space: SpaceRecord) {
         guard (space.kind == .fullScreenApp || space.kind == .splitView),
               let processIdentifier = space.applicationProcessIdentifiers.first,
-              CGPreflightPostEventAccess() else { return }
+                            AXIsProcessTrusted() else {
+                        requestAccessibilityAccessIfNeeded()
+                        showAccessibilityPermissionAlert()
+                        return
+                }
         activate(space: space)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { [weak self] in
             NSRunningApplication(processIdentifier: processIdentifier)?.activate(options: [])
@@ -791,7 +794,7 @@ final class OverlayController: NSObject, NSApplicationDelegate {
     private func close(space: SpaceRecord) {
           guard (space.kind == .fullScreenApp || space.kind == .splitView),
               let processIdentifier = space.applicationProcessIdentifiers.first else { return }
-          guard CGPreflightPostEventAccess() else {
+                    guard AXIsProcessTrusted() else {
             requestAccessibilityAccessIfNeeded()
             showAccessibilityPermissionAlert()
             return
@@ -983,9 +986,6 @@ final class OverlayController: NSObject, NSApplicationDelegate {
     }
 
     private func refreshDiscoveredSpaces() {
-        if !CGPreflightScreenCaptureAccess() {
-            requestScreenCaptureAccessIfNeeded()
-        }
         discoveryTask?.cancel()
         discoveryTask = Task { [weak self] in
             let spaces = await SkyLightSpaceDiscovery().currentSpaces()
