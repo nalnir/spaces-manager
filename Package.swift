@@ -11,7 +11,7 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "SpacesManager",
-            resources: [.process("Resources")]
+            exclude: ["Resources"]
         ),
     ]
 )

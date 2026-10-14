@@ -175,7 +175,7 @@ final class OverlayController: NSObject, NSApplicationDelegate {
     private func installStatusItem() {
         let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
-            if let url = Bundle.module.url(forResource: "MenuBarIcon", withExtension: "png"),
+            if let url = Bundle.main.url(forResource: "MenuBarIcon", withExtension: "png"),
                let image = NSImage(contentsOf: url) {
                 image.size = NSSize(width: 18, height: 18)
                 image.isTemplate = true
@@ -256,7 +256,7 @@ final class OverlayController: NSObject, NSApplicationDelegate {
         let alert = NSAlert()
         alert.messageText = "Spaces Manager"
         alert.informativeText = "Organize, reorder, and navigate your macOS Spaces."
-        if let url = Bundle.module.url(forResource: "AppIcon", withExtension: "png"),
+        if let url = Bundle.main.url(forResource: "AppIcon", withExtension: "png"),
            let image = NSImage(contentsOf: url) {
             image.size = NSSize(width: 96, height: 96)
             alert.icon = image

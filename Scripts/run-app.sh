@@ -24,7 +24,8 @@ mkdir -p "$app_bundle/Contents/Resources"
 iconset="$app_bundle/Contents/Resources/AppIcon.iconset"
 mkdir -p "$iconset"
 cp "$build_products_dir/SpacesManager" "$app_bundle/Contents/MacOS/SpacesManager"
-cp -R "$build_products_dir/SpacesManager_SpacesManager.bundle" "$app_bundle/Contents/Resources/"
+cp "$project_root/Sources/SpacesManager/Resources/AppIcon.png" "$app_bundle/Contents/Resources/"
+cp "$project_root/Sources/SpacesManager/Resources/MenuBarIcon.png" "$app_bundle/Contents/Resources/"
 
 for size in 16 32 128 256 512; do
   sips -z "$size" "$size" "$project_root/Sources/SpacesManager/Resources/AppIcon.png" --out "$iconset/icon_${size}x${size}.png" >/dev/null
