@@ -765,6 +765,9 @@ final class OverlayController: NSObject, NSApplicationDelegate {
             showAccessibilityPermissionAlert()
             return
         }
+        NSLog(
+            "Spaces Manager activating Space \(nativeSpaceID): \(navigation.direction) x\(navigation.count) on \(displayIdentifier)."
+        )
         dismissOverlay()
         Task {
             for step in 0..<navigation.count {
@@ -909,13 +912,17 @@ final class OverlayController: NSObject, NSApplicationDelegate {
         keyDown?.flags = shortcut.modifiers
         keyDown?.post(tap: .cghidEventTap)
 
+        let modifierFlags: CGEventFlags = [.maskCommand, .maskShift, .maskAlternate, .maskControl]
         let keyUp = CGEvent(
             keyboardEventSource: source,
             virtualKey: shortcut.keyCode,
             keyDown: false
         )
-        keyUp?.flags = shortcut.modifiers
+        keyUp?.flags = shortcut.modifiers.subtracting(modifierFlags)
         keyUp?.post(tap: .cghidEventTap)
+        NSLog(
+            "Spaces Manager posted Mission Control shortcut: keyCode=\(shortcut.keyCode), modifiers=\(shortcut.modifiers.rawValue)."
+        )
     }
 
     private func configuredSpaceNavigationShortcut(for direction: SpaceNavigationDirection) -> (keyCode: CGKeyCode, modifiers: CGEventFlags) {
