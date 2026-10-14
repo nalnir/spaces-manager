@@ -14,6 +14,7 @@ fi
 signing_identity="${signing_identity:--}"
 
 cd "$project_root"
+swift build
 build_products_dir="$(swift build --show-bin-path)"
 pkill -x SpacesManager 2>/dev/null || true
 mkdir -p "$HOME/Applications"
