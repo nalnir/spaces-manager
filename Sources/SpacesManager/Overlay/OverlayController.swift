@@ -75,11 +75,20 @@ final class OverlayController: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        NSApp.windows.forEach { $0.close() }
         installStatusItem()
         installInvocationHotKey()
         observeActiveSpaceChanges()
         NSLog("Spaces Manager can post Space navigation events: \(CGPreflightPostEventAccess())")
         requestScreenCaptureAccessIfNeeded()
+    }
+
+    func applicationShouldRestoreApplicationState(_ app: NSApplication) -> Bool {
+        false
+    }
+
+    func applicationShouldSaveApplicationState(_ app: NSApplication) -> Bool {
+        false
     }
 
     func applicationWillTerminate(_ notification: Notification) {
