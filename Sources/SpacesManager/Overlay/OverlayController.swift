@@ -4,6 +4,7 @@ import Combine
 import Carbon
 import CoreGraphics
 import Darwin
+import ServiceManagement
 import SwiftUI
 import UniformTypeIdentifiers
 private final class OverlayPanel: NSPanel {
@@ -76,10 +77,20 @@ final class OverlayController: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         NSApp.windows.forEach { $0.close() }
+        registerLoginItem()
         installStatusItem()
         installInvocationHotKey()
         observeActiveSpaceChanges()
         NSLog("Spaces Manager permissions: Accessibility=\(AXIsProcessTrusted()), ScreenRecording=\(CGPreflightScreenCaptureAccess())")
+    }
+
+    private func registerLoginItem() {
+        guard SMAppService.mainApp.status == .notRegistered else { return }
+        do {
+            try SMAppService.mainApp.register()
+        } catch {
+            NSLog("Spaces Manager could not register its login item: \(error.localizedDescription)")
+        }
     }
 
     func applicationShouldRestoreApplicationState(_ app: NSApplication) -> Bool {
